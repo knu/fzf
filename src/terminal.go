@@ -59,7 +59,7 @@ type Terminal struct {
 	inlineInfo bool
 	prompt     string
 	promptLen  int
-	reverse    bool
+	reverse    reverseArea
 	fullscreen bool
 	hscroll    bool
 	hscrollOff int
@@ -301,10 +301,11 @@ func trimQuery(query string) []rune {
 func NewTerminal(opts *Options, eventBox *util.EventBox) *Terminal {
 	input := trimQuery(opts.Query)
 	var header []string
-	if opts.Reverse {
-		header = opts.Header
-	} else {
+	switch opts.Reverse {
+	case reverseNone:
 		header = reverseStringArray(opts.Header)
+	default:
+		header = opts.Header
 	}
 	var delay time.Duration
 	if opts.Tac {
@@ -642,8 +643,18 @@ func (t *Terminal) resizeWindows() {
 }
 
 func (t *Terminal) move(y int, x int, clear bool) {
-	if !t.reverse {
-		y = t.window.Height() - y - 1
+	h := t.window.Height()
+
+	switch t.reverse {
+	case reverseNone:
+		y = h - y - 1
+	case reverseItems:
+		n := 2 + len(t.header)
+		if y < n {
+			y = h - y - 1
+		} else {
+			y -= n
+		}
 	}
 
 	if clear {
@@ -747,7 +758,7 @@ func (t *Terminal) printList() {
 	count := t.merger.Length() - t.offset
 	for j := 0; j < maxy; j++ {
 		i := j
-		if !t.reverse {
+		if t.reverse == reverseNone {
 			i = maxy - 1 - j
 		}
 		line := i + 2 + len(t.header)
@@ -1659,12 +1670,12 @@ func (t *Terminal) Loop() {
 					req(reqList, reqInfo)
 				}
 			case actToggleIn:
-				if t.reverse {
+				if t.reverse != reverseNone {
 					return doAction(action{t: actToggleUp}, mapkey)
 				}
 				return doAction(action{t: actToggleDown}, mapkey)
 			case actToggleOut:
-				if t.reverse {
+				if t.reverse != reverseNone {
 					return doAction(action{t: actToggleDown}, mapkey)
 				}
 				return doAction(action{t: actToggleUp}, mapkey)
@@ -1792,7 +1803,7 @@ func (t *Terminal) Loop() {
 					mx -= t.window.Left()
 					my -= t.window.Top()
 					mx = util.Constrain(mx-t.promptLen, 0, len(t.input))
-					if !t.reverse {
+					if t.reverse == reverseNone {
 						my = t.window.Height() - my - 1
 					}
 					min := 2 + len(t.header)
@@ -1885,7 +1896,7 @@ func (t *Terminal) constrain() {
 }
 
 func (t *Terminal) vmove(o int, allowCycle bool) {
-	if t.reverse {
+	if t.reverse != reverseNone {
 		o *= -1
 	}
 	dest := t.cy + o

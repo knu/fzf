@@ -53,7 +53,7 @@ const usage = `usage: fzf [options]
                           height instead of using fullscreen
     --min-height=HEIGHT   Minimum height when --height is given in percent
                           (default: 10)
-    --reverse             Reverse orientation
+    --reverse[=AREA]      Reverse orientation: [all|items|none] (default: none)
     --border              Draw border above and below the finder
     --margin=MARGIN       Screen margin (TRBL / TB,RL / T,RL,B / T,R,B,L)
     --inline-info         Display finder info inline with the query
@@ -132,6 +132,15 @@ const (
 	posRight
 )
 
+// Which area should be reversed
+type reverseArea int
+
+const (
+	reverseNone reverseArea = iota
+	reverseItems
+	reverseAll
+)
+
 type previewOpts struct {
 	command  string
 	position windowPosition
@@ -161,7 +170,7 @@ type Options struct {
 	Bold        bool
 	Height      sizeSpec
 	MinHeight   int
-	Reverse     bool
+	Reverse     reverseArea
 	Cycle       bool
 	Hscroll     bool
 	HscrollOff  int
@@ -211,7 +220,7 @@ func defaultOptions() *Options {
 		Black:       false,
 		Bold:        true,
 		MinHeight:   10,
-		Reverse:     false,
+		Reverse:     reverseNone,
 		Cycle:       false,
 		Hscroll:     true,
 		HscrollOff:  10,
@@ -857,6 +866,20 @@ func parseHeight(str string) sizeSpec {
 	return size
 }
 
+func parseReverse(str string) reverseArea {
+	switch str {
+	case "all":
+		return reverseAll
+	case "items":
+		return reverseItems
+	case "none":
+		return reverseNone
+	default:
+		errorExit("invalid area (expected: all, items or none)")
+	}
+	return reverseNone
+}
+
 func parsePreviewWindow(opts *previewOpts, input string) {
 	// Default
 	opts.position = posRight
@@ -1038,9 +1061,9 @@ func parseOptions(opts *Options, allArgs []string) {
 		case "--no-bold":
 			opts.Bold = false
 		case "--reverse":
-			opts.Reverse = true
+			opts.Reverse = reverseAll
 		case "--no-reverse":
-			opts.Reverse = false
+			opts.Reverse = reverseNone
 		case "--cycle":
 			opts.Cycle = true
 		case "--no-cycle":
@@ -1156,6 +1179,8 @@ func parseOptions(opts *Options, allArgs []string) {
 				opts.Height = parseHeight(value)
 			} else if match, value := optString(arg, "--min-height="); match {
 				opts.MinHeight = atoi(value)
+			} else if match, value := optString(arg, "--reverse="); match {
+				opts.Reverse = parseReverse(value)
 			} else if match, value := optString(arg, "--toggle-sort="); match {
 				parseToggleSort(opts.Keymap, value)
 			} else if match, value := optString(arg, "--expect="); match {
