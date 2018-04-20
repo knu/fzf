@@ -156,8 +156,21 @@ the full screen.
 Minimum height when \fB--height\fR is given in percent (default: 10).
 Ignored when \fB--height\fR is not specified.
 .TP
+.BI "--reverse=" AREA
+Reverse orientation (default: none)
+
+.br
+.BR none "   Show everything from bottom up"
+.br
+.BR items "  Show items from top down, prompt and header at the bottom"
+.br
+.BR all "    Show everything from top down"
+.br
+
+.TP
 .B "--reverse"
-Reverse orientation
+Equivalent to \fB--reverse=all\fR
+
 .TP
 .B "--border"
 Draw border above and below the finder
